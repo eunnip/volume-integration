@@ -4,7 +4,7 @@ An interactive, single-file web app that helps students *see* what happens durin
 volume integration. Drag to orbit, scroll to zoom, and watch Riemann sums sharpen
 into exact integrals.
 
-🔗 **Live demo:** _add your GitHub Pages URL here once published_
+🔗 **Live demo:** https://eunnip.github.io/volume-integration/
 
 ## What's inside
 
