@@ -1,0 +1,736 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Volumes by Integration — Visual Guide</title>
+<style>
+  :root{
+    --bg:#0d1326; --panel:#141d36; --panel2:#1b2747; --line:#2a3a63;
+    --text:#e8edf7; --muted:#9aa8c7; --accent:#36d6c3; --accent2:#ff9f43;
+    --blue:#4c8dff; --red:#ff6b81; --green:#7ee787;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%}
+  body{
+    background:radial-gradient(1200px 800px at 70% -10%, #16203c 0%, var(--bg) 55%);
+    color:var(--text); font-family:'Segoe UI',system-ui,-apple-system,Roboto,Helvetica,Arial,sans-serif;
+    display:flex; flex-direction:column; height:100vh; overflow:hidden;
+  }
+  header{
+    padding:14px 22px; border-bottom:1px solid var(--line);
+    display:flex; align-items:center; gap:18px; flex-wrap:wrap;
+    background:linear-gradient(180deg, rgba(54,214,195,.06), transparent);
+  }
+  header h1{font-size:18px; margin:0; font-weight:650; letter-spacing:.2px}
+  header h1 .dot{color:var(--accent)}
+  header .sub{color:var(--muted); font-size:12.5px}
+  nav{display:flex; gap:6px; flex-wrap:wrap; margin-left:auto}
+  nav button{
+    background:var(--panel); color:var(--muted); border:1px solid var(--line);
+    padding:8px 13px; border-radius:9px; cursor:pointer; font-size:13px; font-weight:600;
+    transition:.15s;
+  }
+  nav button:hover{color:var(--text); border-color:var(--accent)}
+  nav button.active{background:var(--accent); color:#05231f; border-color:var(--accent)}
+
+  main{flex:1; display:flex; min-height:0}
+  #viewport{flex:1; position:relative; min-width:0}
+  #c3d{width:100%; height:100%; display:block; cursor:grab}
+  #c3d:active{cursor:grabbing}
+  .vp-hint{position:absolute; left:14px; bottom:12px; color:var(--muted);
+    font-size:11.5px; background:rgba(13,19,38,.6); padding:5px 9px; border-radius:7px;
+    border:1px solid var(--line); pointer-events:none}
+  .stepbadge{position:absolute; top:14px; left:14px; background:rgba(13,19,38,.72);
+    border:1px solid var(--line); border-radius:9px; padding:7px 12px; font-size:12px;
+    color:var(--accent); font-weight:700; letter-spacing:.4px}
+
+  aside{
+    width:380px; min-width:340px; border-left:1px solid var(--line); background:var(--panel);
+    padding:20px 20px 28px; overflow-y:auto;
+  }
+  aside h2{margin:0 0 4px; font-size:20px}
+  aside .goal{color:var(--accent); font-weight:700; font-size:12px; text-transform:uppercase; letter-spacing:1px; margin-bottom:14px}
+  aside p{color:#cdd6ea; line-height:1.55; font-size:14px; margin:10px 0}
+  aside .lead{color:var(--text)}
+  .card{background:var(--panel2); border:1px solid var(--line); border-radius:12px; padding:14px 15px; margin:14px 0}
+  .card h3{margin:0 0 8px; font-size:13px; color:var(--accent2); text-transform:uppercase; letter-spacing:.6px}
+  .formula{font-size:15px; overflow-x:auto}
+
+  .control{margin:14px 0}
+  .control label{display:flex; justify-content:space-between; font-size:13px; color:var(--muted); margin-bottom:6px}
+  .control label b{color:var(--text)}
+  input[type=range]{width:100%; accent-color:var(--accent)}
+  select, .seg{width:100%; }
+  select{background:var(--panel2); color:var(--text); border:1px solid var(--line); padding:8px; border-radius:8px; font-size:13px}
+  .seg{display:flex; gap:6px; flex-wrap:wrap}
+  .seg button{flex:1; background:var(--panel2); color:var(--muted); border:1px solid var(--line);
+    padding:7px 6px; border-radius:8px; font-size:12px; cursor:pointer; min-width:60px}
+  .seg button.active{background:var(--blue); color:#fff; border-color:var(--blue)}
+  .btnrow{display:flex; gap:8px; margin-top:6px}
+  .btnrow button{flex:1; background:var(--panel2); border:1px solid var(--line); color:var(--text);
+    padding:9px; border-radius:8px; cursor:pointer; font-size:13px; font-weight:600}
+  .btnrow button:hover{border-color:var(--accent)}
+
+  .nums{display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:6px}
+  .num{background:var(--panel2); border:1px solid var(--line); border-radius:10px; padding:10px 12px}
+  .num .k{font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.5px}
+  .num .v{font-size:20px; font-weight:700; margin-top:3px}
+  .num.app .v{color:var(--accent2)} .num.exa .v{color:var(--accent)}
+  .errbar{height:8px; background:var(--panel2); border-radius:6px; overflow:hidden; margin-top:10px; border:1px solid var(--line)}
+  .errbar > div{height:100%; background:linear-gradient(90deg,var(--red),var(--accent2)); width:0%}
+  .errtxt{font-size:12px; color:var(--muted); margin-top:6px}
+
+  .legend{display:flex; gap:14px; flex-wrap:wrap; font-size:12px; color:var(--muted); margin-top:4px}
+  .legend span{display:flex; align-items:center; gap:6px}
+  .sw{width:13px; height:13px; border-radius:3px; display:inline-block}
+
+  canvas.c2d{width:100%; height:130px; background:var(--panel2); border:1px solid var(--line); border-radius:10px; margin-top:6px}
+
+  .tip{font-size:12.5px; color:var(--muted); border-left:3px solid var(--accent); padding:4px 0 4px 10px; margin:12px 0}
+  @media (max-width:880px){
+    main{flex-direction:column} aside{width:auto; min-width:0; border-left:none; border-top:1px solid var(--line); max-height:46%}
+    #viewport{min-height:300px}
+  }
+</style>
+<script>
+MathJax = { tex:{inlineMath:[['\\(','\\)']], displayMath:[['$$','$$']]}, svg:{fontCache:'global'} };
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-svg.min.js" id="MathJax-script"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+<body>
+<header>
+  <div>
+    <h1>Volumes by Integration <span class="dot">●</span></h1>
+    <div class="sub">An interactive visual guide — drag to rotate, scroll to zoom</div>
+  </div>
+  <nav id="nav"></nav>
+</header>
+
+<main>
+  <div id="viewport">
+    <div class="stepbadge" id="badge">INTUITION</div>
+    <canvas id="c3d"></canvas>
+    <div class="vp-hint">🖱️ drag to orbit · scroll to zoom · use the controls on the right →</div>
+  </div>
+  <aside id="panel"></aside>
+</main>
+
+<script>
+/* ============================================================
+   SHARED 3D SETUP
+   ============================================================ */
+const canvas = document.getElementById('c3d');
+const renderer = new THREE.WebGLRenderer({canvas, antialias:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x0d1326);
+const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 1000);
+
+// lights
+scene.add(new THREE.AmbientLight(0xffffff, 0.65));
+const dir = new THREE.DirectionalLight(0xffffff, 0.9); dir.position.set(6,10,8); scene.add(dir);
+const dir2 = new THREE.DirectionalLight(0x88aaff, 0.4); dir2.position.set(-6,-4,-8); scene.add(dir2);
+
+const solidGroup = new THREE.Group(); scene.add(solidGroup);
+
+// simple orbit controls
+const orbit = {theta:0.85, phi:1.15, r:13, target:new THREE.Vector3(0,0,0), auto:false};
+function applyCam(){
+  const {theta,phi,r,target}=orbit;
+  camera.position.set(
+    target.x + r*Math.sin(phi)*Math.cos(theta),
+    target.y + r*Math.cos(phi),
+    target.z + r*Math.sin(phi)*Math.sin(theta));
+  camera.lookAt(target);
+}
+let dragging=false, px=0, py=0;
+canvas.addEventListener('pointerdown',e=>{dragging=true;px=e.clientX;py=e.clientY;canvas.setPointerCapture(e.pointerId)});
+canvas.addEventListener('pointerup',e=>{dragging=false});
+canvas.addEventListener('pointermove',e=>{
+  if(!dragging)return;
+  orbit.theta -= (e.clientX-px)*0.008;
+  orbit.phi   -= (e.clientY-py)*0.008;
+  orbit.phi = Math.max(0.12, Math.min(Math.PI-0.12, orbit.phi));
+  px=e.clientX; py=e.clientY;
+});
+canvas.addEventListener('wheel',e=>{e.preventDefault();
+  orbit.r *= (1 + Math.sign(e.deltaY)*0.08);
+  orbit.r = Math.max(4, Math.min(40, orbit.r));
+},{passive:false});
+
+function resize(){
+  const w=canvas.clientWidth, h=canvas.clientHeight;
+  if(canvas.width!==w||canvas.height!==h){ renderer.setSize(w,h,false); camera.aspect=w/h; camera.updateProjectionMatrix(); }
+}
+function animate(){
+  requestAnimationFrame(animate);
+  resize();
+  if(orbit.auto) orbit.theta += 0.004;
+  if(typeof tickHook==='function') tickHook();
+  applyCam();
+  renderer.render(scene,camera);
+}
+
+/* ---------- helpers ---------- */
+function clearGroup(){ while(solidGroup.children.length) solidGroup.remove(solidGroup.children[0]); }
+function mat(color,opacity=1,flat=false){
+  return new THREE.MeshStandardMaterial({color,transparent:opacity<1,opacity,
+    metalness:.1,roughness:.6,side:THREE.DoubleSide,flatShading:flat});
+}
+function addAxes(len=6){
+  const ax=[[0xff6b81,[len,0,0]],[0x7ee787,[0,len,0]],[0x4c8dff,[0,0,len]]];
+  ax.forEach(([c,p])=>{
+    const g=new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(-1,0,0).multiply(new THREE.Vector3(p[0]?1:0,p[1]?1:0,p[2]?1:0)), new THREE.Vector3(...p)]);
+    solidGroup.add(new THREE.Line(g, new THREE.LineBasicMaterial({color:c})));
+  });
+}
+function addGrid(){
+  const grid=new THREE.GridHelper(14,14,0x2a3a63,0x1b2747);
+  grid.position.y=-0.001; solidGroup.add(grid);
+}
+// numerical integral (Simpson) of g on [a,b]
+function integrate(g,a,b,n=2000){
+  if(n%2)n++; const h=(b-a)/n; let s=g(a)+g(b);
+  for(let i=1;i<n;i++) s += (i%2?4:2)*g(a+i*h);
+  return s*h/3;
+}
+
+/* ============================================================
+   FUNCTION LIBRARY  (radius/height curves)
+   ============================================================ */
+const FUNCS = {
+  sqrt : {f:x=>Math.sqrt(x),      a:0,b:4, tex:'\\sqrt{x}',     name:'√x'},
+  line : {f:x=>0.7*x,             a:0,b:3, tex:'0.7x',          name:'0.7x (cone)'},
+  sine : {f:x=>1+Math.sin(x),     a:0,b:Math.PI, tex:'1+\\sin x', name:'1+sin x'},
+  quad : {f:x=>0.45*x*x,          a:0,b:2.5, tex:'0.45x^{2}',   name:'0.45x²'},
+};
+const SCALE = 2.0; // world units per math unit (visual)
+
+/* ============================================================
+   STATE + TABS
+   ============================================================ */
+const TABS = ['intuition','disk','washer','shell','cross','triple','calculator'];
+const TAB_LABEL = {intuition:'INTUITION',disk:'DISK METHOD',washer:'WASHER METHOD',
+  shell:'SHELL METHOD',cross:'CROSS-SECTIONS',triple:'TRIPLE INTEGRAL',calculator:'CALCULATOR'};
+let tab='intuition';
+let tickHook=null;
+const state = {
+  func:'sqrt', N:8, sweep:Math.PI*2, playing:false,
+  outer:'sqrt', shape:'square', tripleN:6,
+  calc:{expr:'x^3', a:'0', b:'2', method:'disk', N:24, error:''}
+};
+
+/* build nav */
+const nav=document.getElementById('nav');
+TABS.forEach(t=>{
+  const b=document.createElement('button'); b.textContent=TAB_LABEL[t].replace(' METHOD','');
+  b.dataset.t=t; b.onclick=()=>setTab(t); nav.appendChild(b);
+});
+function setTab(t){
+  tab=t; tickHook=null; orbit.auto=false;
+  document.getElementById('badge').textContent=TAB_LABEL[t];
+  [...nav.children].forEach(b=>b.classList.toggle('active',b.dataset.t===t));
+  RENDER[t]();
+  if(window.MathJax&&MathJax.typesetPromise) MathJax.typesetPromise();
+}
+
+/* ============================================================
+   PANEL TEMPLATES
+   ============================================================ */
+const panel=document.getElementById('panel');
+function funcSelect(key){
+  return `<select onchange="onFunc(this.value)">`+
+    Object.entries(FUNCS).map(([k,v])=>`<option value="${k}" ${k===state[key]?'selected':''}>f(x) = ${v.name}</option>`).join('')+
+    `</select>`;
+}
+window.onFunc=v=>{ if(tab==='washer') state.outer=v; else state.func=v; RENDER[tab](); };
+
+/* ============================================================
+   RENDERERS
+   ============================================================ */
+const RENDER={};
+
+/* ---------- INTUITION ---------- */
+RENDER.intuition=()=>{
+  const F=FUNCS[state.func];
+  panel.innerHTML=`
+    <div class="goal">The big idea</div>
+    <h2>Spinning a curve into a solid</h2>
+    <p class="lead">Take a flat curve \\(y=f(x)\\) and spin it a full turn around the x-axis. The path it sweeps out traces a smooth 3-D shape called a <b>solid of revolution</b>.</p>
+    <div class="control">
+      <label>Curve <b>f(x) = ${F.name}</b></label>${funcSelect('func')}
+    </div>
+    <div class="control">
+      <label>Sweep angle <b id="swv">${Math.round(state.sweep*180/Math.PI)}°</b></label>
+      <input type="range" min="0" max="360" value="${Math.round(state.sweep*180/Math.PI)}" oninput="onSweep(this.value)">
+    </div>
+    <div class="btnrow"><button onclick="playSweep()" id="playb">▶ Play spin</button>
+      <button onclick="orbit.auto=!orbit.auto">⟳ Orbit camera</button></div>
+    <div class="card"><h3>Why we need integration</h3>
+      <p style="margin:0">The solid has a curvy boundary, so there's no simple "length × width × height" formula. The trick: <b>slice it into millions of tiny, simple pieces</b>, find the volume of each, and add them all up. That adding-up of infinitely many tiny slices <b>is</b> integration.</p></div>
+    <div class="tip">Next: open <b>Disk</b> to see those slices appear, and watch the sum sharpen into the exact answer.</div>
+  `;
+  drawSolid();
+  MathJax.typesetPromise&&MathJax.typesetPromise();
+};
+function drawSolid(){
+  clearGroup(); addAxes(7);
+  const F=FUNCS[state.func], {f,a,b}=F;
+  const pts=[]; const M=80;
+  for(let i=0;i<=M;i++){const t=a+(b-a)*i/M; pts.push(new THREE.Vector2(Math.max(f(t),1e-3)*SCALE, t*SCALE));}
+  const lathe=new THREE.LatheGeometry(pts,64,0,Math.max(state.sweep,0.001));
+  const mesh=new THREE.Mesh(lathe, mat(0x36d6c3,0.55)); mesh.rotation.z=-Math.PI/2;
+  solidGroup.add(mesh);
+  // generating curve (bold line at phi=0 plane)
+  const cpts=pts.map(p=>new THREE.Vector3(p.y, p.x, 0));
+  solidGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(cpts),
+    new THREE.LineBasicMaterial({color:0xff9f43,linewidth:3})));
+  centerOnAxis(a,b);
+}
+function centerOnAxis(a,b){ solidGroup.position.set(-(a+b)/2*SCALE,0,0); orbit.target.set(0,0,0); }
+window.onSweep=v=>{ state.sweep=v*Math.PI/180; document.getElementById('swv').textContent=Math.round(v)+'°'; drawSolid(); };
+window.playSweep=()=>{
+  state.playing=!state.playing;
+  document.getElementById('playb').textContent=state.playing?'❚❚ Pause':'▶ Play spin';
+  tickHook = state.playing ? ()=>{
+    state.sweep+=0.03; if(state.sweep>=Math.PI*2){state.sweep=Math.PI*2;state.playing=false;tickHook=null;
+      document.getElementById('playb').textContent='▶ Play spin';}
+    const s=document.getElementById('swv'); if(s)s.textContent=Math.round(state.sweep*180/Math.PI)+'°';
+    const r=panel.querySelector('input[type=range]'); if(r)r.value=Math.round(state.sweep*180/Math.PI);
+    drawSolid();
+  } : null;
+};
+
+/* ---------- DISK ---------- */
+RENDER.disk=()=>{
+  const F=FUNCS[state.func];
+  panel.innerHTML=`
+    <div class="goal">Disk method · rotate about x-axis</div>
+    <h2>Slice into thin disks</h2>
+    <p>Cut the solid with planes perpendicular to the x-axis. Each slab is almost a flat <b>disk (coin)</b> of radius \\(f(x)\\) and tiny thickness \\(\\Delta x\\).</p>
+    <div class="card"><h3>How to calculate</h3>
+      <p style="margin:0 0 6px">One disk's volume = area of circle × thickness:</p>
+      <div class="formula">$$\\Delta V=\\pi\\,[f(x)]^{2}\\,\\Delta x$$</div>
+      <p style="margin:6px 0 0">Add every disk and shrink the thickness to zero — the sum becomes an integral:</p>
+      <div class="formula">$$V=\\pi\\!\\int_{${F.a}}^{${F.b}}\\!\\big[${F.tex}\\big]^{2}\\,dx$$</div>
+    </div>
+    <div class="control"><label>Curve <b>f(x) = ${F.name}</b></label>${funcSelect('func')}</div>
+    <div class="control">
+      <label>Number of disks <b id="Nv">${state.N}</b></label>
+      <input type="range" min="1" max="80" value="${state.N}" oninput="onN(this.value)">
+    </div>
+    <canvas class="c2d" id="profile"></canvas>
+    <div class="nums">
+      <div class="num app"><div class="k">Sum of disks</div><div class="v" id="vApp">–</div></div>
+      <div class="num exa"><div class="k">Exact integral</div><div class="v" id="vExa">–</div></div>
+    </div>
+    <div class="errbar"><div id="errfill"></div></div>
+    <div class="errtxt" id="errtxt"></div>
+    <div class="legend"><span><i class="sw" style="background:#ff9f43"></i>disk slices</span>
+      <span><i class="sw" style="background:#36d6c3"></i>true solid</span></div>
+  `;
+  buildDisks(); MathJax.typesetPromise&&MathJax.typesetPromise();
+};
+window.onN=v=>{ state.N=+v; const e=document.getElementById('Nv'); if(e)e.textContent=v;
+  if(tab==='triple'){state.tripleN=+v;buildTriple();} else if(tab==='cross') buildCross(); else buildDisks(); };
+
+function buildDisks(){
+  clearGroup(); addAxes(7);
+  const F=FUNCS[state.func], {f,a,b}=F, N=state.N, dx=(b-a)/N;
+  // translucent true solid
+  const pts=[]; for(let i=0;i<=60;i++){const t=a+(b-a)*i/60;pts.push(new THREE.Vector2(Math.max(f(t),1e-3)*SCALE,t*SCALE));}
+  const lathe=new THREE.LatheGeometry(pts,48); const ref=new THREE.Mesh(lathe,mat(0x36d6c3,0.16)); ref.rotation.z=-Math.PI/2; solidGroup.add(ref);
+  // disks
+  let approx=0;
+  for(let i=0;i<N;i++){
+    const xc=a+(i+0.5)*dx, r=f(xc); approx+=Math.PI*r*r*dx;
+    const cyl=new THREE.CylinderGeometry(r*SCALE,r*SCALE,dx*SCALE*0.92,40);
+    const m=new THREE.Mesh(cyl, mat(0xff9f43,0.85)); m.rotation.z=-Math.PI/2; m.position.x=xc*SCALE;
+    solidGroup.add(m);
+    const edge=new THREE.Mesh(cyl, new THREE.MeshBasicMaterial({color:0x07101f,wireframe:true,transparent:true,opacity:.18}));
+    edge.rotation.z=-Math.PI/2; edge.position.x=xc*SCALE; solidGroup.add(edge);
+  }
+  centerOnAxis(a,b);
+  const exact=Math.PI*integrate(x=>f(x)*f(x),a,b);
+  showNums(approx,exact);
+  drawProfile(F,N,'disk');
+}
+
+/* ---------- WASHER ---------- */
+RENDER.washer=()=>{
+  panel.innerHTML=`
+    <div class="goal">Washer method · region between two curves</div>
+    <h2>Disks with a hole punched out</h2>
+    <p>When you rotate the area <b>between</b> two curves, each slice is a <b>washer</b> (a disk with a smaller disk removed). Here the outer radius is \\(R(x)=${FUNCS[state.outer].tex}\\) and the inner radius is \\(r(x)=\\tfrac14 R(x)\\).</p>
+    <div class="card"><h3>How to calculate</h3>
+      <div class="formula">$$\\Delta V=\\pi\\big(R^{2}-r^{2}\\big)\\,\\Delta x \\;\\Rightarrow\\; V=\\pi\\!\\int_a^b\\!\\big(R^2-r^2\\big)dx$$</div>
+      <p style="margin:6px 0 0">Big circle area minus the hole's area, times thickness — then summed.</p></div>
+    <div class="control"><label>Outer curve <b>R(x) = ${FUNCS[state.outer].name}</b></label>${funcSelect('outer')}</div>
+    <div class="control"><label>Number of washers <b id="Nv">${state.N}</b></label>
+      <input type="range" min="1" max="60" value="${state.N}" oninput="onN(this.value)"></div>
+    <div class="nums">
+      <div class="num app"><div class="k">Sum of washers</div><div class="v" id="vApp">–</div></div>
+      <div class="num exa"><div class="k">Exact integral</div><div class="v" id="vExa">–</div></div>
+    </div>
+    <div class="errbar"><div id="errfill"></div></div><div class="errtxt" id="errtxt"></div>
+    <div class="legend"><span><i class="sw" style="background:#4c8dff"></i>outer disk</span>
+      <span><i class="sw" style="background:#ff6b81"></i>removed hole</span></div>
+  `;
+  buildWasher(); MathJax.typesetPromise&&MathJax.typesetPromise();
+};
+function buildWasher(){
+  clearGroup(); addAxes(7);
+  const F=FUNCS[state.outer], R=F.f, a=F.a,b=F.b, N=state.N, dx=(b-a)/N, k=0.25;
+  let approx=0;
+  for(let i=0;i<N;i++){
+    const xc=a+(i+0.5)*dx, ro=R(xc), ri=k*R(xc); approx+=Math.PI*(ro*ro-ri*ri)*dx;
+    const outer=new THREE.Mesh(new THREE.CylinderGeometry(ro*SCALE,ro*SCALE,dx*SCALE*0.9,40,1,true), mat(0x4c8dff,0.5));
+    outer.rotation.z=-Math.PI/2; outer.position.x=xc*SCALE; solidGroup.add(outer);
+    const inner=new THREE.Mesh(new THREE.CylinderGeometry(ri*SCALE,ri*SCALE,dx*SCALE*0.92,28), mat(0xff6b81,0.92));
+    inner.rotation.z=-Math.PI/2; inner.position.x=xc*SCALE; solidGroup.add(inner);
+  }
+  centerOnAxis(a,b);
+  const exact=Math.PI*integrate(x=>R(x)*R(x)-(k*R(x))*(k*R(x)),a,b);
+  showNums(approx,exact);
+}
+
+/* ---------- SHELL ---------- */
+RENDER.shell=()=>{
+  const F=FUNCS[state.func];
+  panel.innerHTML=`
+    <div class="goal">Shell method · rotate about y-axis</div>
+    <h2>Nested cylindrical shells</h2>
+    <p>Spin the region around the <b>vertical</b> axis instead. Now it's natural to slice into <b>thin tubes (shells)</b>, like the layers of an onion. Each shell has radius \\(x\\), height \\(f(x)\\), thickness \\(\\Delta x\\).</p>
+    <div class="card"><h3>How to calculate</h3>
+      <p style="margin:0 0 6px">Unroll one shell into a flat sheet: length = circumference \\(2\\pi x\\), height \\(f(x)\\), thickness \\(\\Delta x\\):</p>
+      <div class="formula">$$\\Delta V=2\\pi x\\,f(x)\\,\\Delta x \\;\\Rightarrow\\; V=2\\pi\\!\\int_a^b x\\,f(x)\\,dx$$</div></div>
+    <div class="control"><label>Curve <b>f(x) = ${F.name}</b></label>${funcSelect('func')}</div>
+    <div class="control"><label>Number of shells <b id="Nv">${state.N}</b></label>
+      <input type="range" min="1" max="50" value="${state.N}" oninput="onN(this.value)"></div>
+    <div class="btnrow"><button onclick="orbit.auto=!orbit.auto">⟳ Orbit camera</button></div>
+    <div class="nums">
+      <div class="num app"><div class="k">Sum of shells</div><div class="v" id="vApp">–</div></div>
+      <div class="num exa"><div class="k">Exact integral</div><div class="v" id="vExa">–</div></div>
+    </div>
+    <div class="errbar"><div id="errfill"></div></div><div class="errtxt" id="errtxt"></div>
+    <div class="legend"><span><i class="sw" style="background:#ff9f43"></i>cylindrical shells</span></div>
+  `;
+  buildShell(); MathJax.typesetPromise&&MathJax.typesetPromise();
+};
+function buildShell(){
+  clearGroup(); addGrid();
+  // y-axis
+  solidGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(
+    [new THREE.Vector3(0,0,0),new THREE.Vector3(0,7,0)]), new THREE.LineBasicMaterial({color:0x7ee787})));
+  const F=FUNCS[state.func], {f,a,b}=F, N=state.N, dx=(b-a)/N;
+  let approx=0;
+  for(let i=0;i<N;i++){
+    const xc=a+(i+0.5)*dx, h=f(xc), rad=xc; approx+=2*Math.PI*xc*f(xc)*dx;
+    if(rad<=1e-3) continue;
+    const cyl=new THREE.CylinderGeometry(rad*SCALE,rad*SCALE,h*SCALE,48,1,true);
+    const hue=new THREE.Color().setHSL(0.08+0.5*i/N,0.7,0.55);
+    const m=new THREE.Mesh(cyl, mat(hue.getHex(),0.4)); m.position.y=h*SCALE/2; solidGroup.add(m);
+  }
+  orbit.target.set(0, 2.2, 0); solidGroup.position.set(0,0,0);
+  const exact=2*Math.PI*integrate(x=>x*f(x),a,b);
+  showNums(approx,exact);
+}
+
+/* ---------- CROSS-SECTIONS ---------- */
+RENDER.cross=()=>{
+  const F=FUNCS[state.func];
+  const shapes={square:'Squares',semi:'Semicircles',tri:'Equilateral triangles'};
+  panel.innerHTML=`
+    <div class="goal">Volume by known cross-sections</div>
+    <h2>Stack up flat slabs</h2>
+    <p>No rotation here. We have a flat base region under \\(y=f(x)\\), and on each slice we stand up a known shape (a square, semicircle, or triangle) whose size is set by \\(f(x)\\). Volume = add up the slab volumes.</p>
+    <div class="card"><h3>How to calculate</h3>
+      <p style="margin:0 0 6px">Slab volume = cross-section area \\(A(x)\\) × thickness \\(\\Delta x\\):</p>
+      <div class="formula">$$V=\\int_a^b A(x)\\,dx$$</div>
+      <p style="margin:6px 0 0" id="areaeq"></p></div>
+    <div class="control"><label>Cross-section shape</label>
+      <div class="seg" id="shapeseg">${Object.entries(shapes).map(([k,v])=>`<button class="${state.shape===k?'active':''}" onclick="setShape('${k}')">${v}</button>`).join('')}</div></div>
+    <div class="control"><label>Base curve <b>f(x) = ${F.name}</b></label>${funcSelect('func')}</div>
+    <div class="control"><label>Number of slabs <b id="Nv">${state.N}</b></label>
+      <input type="range" min="1" max="60" value="${state.N}" oninput="onN(this.value)"></div>
+    <div class="nums">
+      <div class="num app"><div class="k">Sum of slabs</div><div class="v" id="vApp">–</div></div>
+      <div class="num exa"><div class="k">Exact integral</div><div class="v" id="vExa">–</div></div>
+    </div>
+    <div class="errbar"><div id="errfill"></div></div><div class="errtxt" id="errtxt"></div>
+  `;
+  buildCross(); MathJax.typesetPromise&&MathJax.typesetPromise();
+};
+window.setShape=s=>{state.shape=s; RENDER.cross();};
+function crossArea(s){ // side/diameter = s
+  if(state.shape==='square') return s*s;
+  if(state.shape==='semi')   return 0.5*Math.PI*(s/2)*(s/2);
+  return Math.sqrt(3)/4*s*s; // equilateral triangle side s
+}
+function buildCross(){
+  clearGroup(); addAxes(7);
+  const F=FUNCS[state.func], {f,a,b}=F, N=state.N, dx=(b-a)/N;
+  let approx=0;
+  for(let i=0;i<N;i++){
+    const xc=a+(i+0.5)*dx, s=f(xc); approx+=crossArea(s)*dx;
+    let geo;
+    const col=new THREE.Color().setHSL(0.5-0.35*i/N,0.65,0.55).getHex();
+    if(state.shape==='square'){
+      geo=new THREE.BoxGeometry(dx*SCALE*0.92, s*SCALE, s*SCALE);
+      const m=new THREE.Mesh(geo,mat(col,0.85)); m.position.set(xc*SCALE, s*SCALE/2, 0); solidGroup.add(m);
+    } else if(state.shape==='semi'){
+      geo=new THREE.CylinderGeometry(s*SCALE/2,s*SCALE/2,dx*SCALE*0.92,32,1,false,0,Math.PI);
+      const m=new THREE.Mesh(geo,mat(col,0.85)); m.rotation.z=-Math.PI/2; m.rotation.y=0; m.position.set(xc*SCALE,0,0); solidGroup.add(m);
+    } else {
+      const h=Math.sqrt(3)/2*s;
+      const shape=new THREE.Shape();
+      shape.moveTo(-s*SCALE/2,0); shape.lineTo(s*SCALE/2,0); shape.lineTo(0,h*SCALE); shape.closePath();
+      geo=new THREE.ExtrudeGeometry(shape,{depth:dx*SCALE*0.92,bevelEnabled:false});
+      const m=new THREE.Mesh(geo,mat(col,0.85)); m.rotation.y=Math.PI/2; m.position.set(xc*SCALE - dx*SCALE*0.46,0,0); solidGroup.add(m);
+    }
+  }
+  centerOnAxis(a,b); orbit.target.set(0,1.5,0);
+  const exact=integrate(x=>crossArea(f(x)),a,b);
+  showNums(approx,exact);
+  const eq={square:'A(x)=[f(x)]^2',semi:'A(x)=\\tfrac{\\pi}{2}\\big(\\tfrac{f(x)}{2}\\big)^2',tri:'A(x)=\\tfrac{\\sqrt3}{4}[f(x)]^2'}[state.shape];
+  const el=document.getElementById('areaeq'); if(el) el.innerHTML='With these slabs: \\('+eq+'\\).';
+}
+
+/* ---------- TRIPLE INTEGRAL ---------- */
+function surf(x,y){ return 4 - (x-1)*(x-1) - (y-1)*(y-1); } // positive on [0,2]^2
+RENDER.triple=()=>{
+  panel.innerHTML=`
+    <div class="goal">Double / triple integral · the 3-D version</div>
+    <h2>Towers under a surface</h2>
+    <p>The very same idea works in 3-D. To find the volume <b>under a surface</b> \\(z=g(x,y)\\), chop the floor into a grid and put a thin <b>box (tower)</b> on each cell. Add every tower's volume.</p>
+    <div class="card"><h3>How to calculate</h3>
+      <div class="formula">$$V=\\sum g(x_i,y_j)\\,\\Delta x\\,\\Delta y \\;\\to\\; \\iint_R g\\,dA=\\iiint_E dV$$</div>
+      <p style="margin:6px 0 0">Here \\(g(x,y)=4-(x-1)^2-(y-1)^2\\) over the square \\([0,2]\\times[0,2]\\). The triple integral \\(\\iiint_E dV\\) counts the same volume by summing tiny unit cubes filling the region \\(E\\).</p></div>
+    <div class="control"><label>Grid resolution <b id="Nv">${state.tripleN}×${state.tripleN}</b></label>
+      <input type="range" min="1" max="40" value="${state.tripleN}" oninput="onTripleN(this.value)"></div>
+    <div class="btnrow"><button onclick="orbit.auto=!orbit.auto">⟳ Orbit camera</button></div>
+    <div class="nums">
+      <div class="num app"><div class="k">Sum of towers</div><div class="v" id="vApp">–</div></div>
+      <div class="num exa"><div class="k">Exact integral</div><div class="v" id="vExa">–</div></div>
+    </div>
+    <div class="errbar"><div id="errfill"></div></div><div class="errtxt" id="errtxt"></div>
+    <div class="tip">Same recipe as every other tab: tiny simple pieces → add them up → shrink to zero → integral.</div>
+  `;
+  buildTriple(); MathJax.typesetPromise&&MathJax.typesetPromise();
+};
+window.onTripleN=v=>{state.tripleN=+v; const e=document.getElementById('Nv'); if(e)e.textContent=v+'×'+v; buildTriple();};
+function buildTriple(){
+  clearGroup(); addGrid();
+  const a=0,b=2,N=state.tripleN, dx=(b-a)/N; let approx=0;
+  const SC=2.2;
+  for(let i=0;i<N;i++)for(let j=0;j<N;j++){
+    const xc=a+(i+0.5)*dx, yc=a+(j+0.5)*dx, h=Math.max(surf(xc,yc),0.001);
+    approx+=h*dx*dx;
+    const box=new THREE.BoxGeometry(dx*SC*0.92,h*SC,dx*SC*0.92);
+    const col=new THREE.Color().setHSL(0.6-0.13*h,0.7,0.55).getHex();
+    const m=new THREE.Mesh(box,mat(col,0.92));
+    m.position.set((xc-1)*SC, h*SC/2, (yc-1)*SC); solidGroup.add(m);
+  }
+  orbit.target.set(0,2.4,0); solidGroup.position.set(0,0,0);
+  const exact=integrate(x=>integrate(y=>surf(x,y),a,b,200),a,b,200);
+  showNums(approx,exact);
+}
+
+/* ============================================================
+   SAFE EXPRESSION PARSER  (no eval) -> JS function f(x)
+   supports + - * / ^, parentheses, implicit mult (2x, 3(x+1)),
+   constants pi e, and sin cos tan asin acos atan sinh cosh tanh
+   sqrt cbrt exp ln log abs
+   ============================================================ */
+const MFN={sin:Math.sin,cos:Math.cos,tan:Math.tan,asin:Math.asin,acos:Math.acos,
+  atan:Math.atan,sinh:Math.sinh,cosh:Math.cosh,tanh:Math.tanh,sqrt:Math.sqrt,
+  cbrt:Math.cbrt,exp:Math.exp,ln:Math.log,log:x=>Math.log10?Math.log10(x):Math.log(x)/Math.LN10,abs:Math.abs};
+function tokenize(s){
+  const t=[]; let i=0; s=s.replace(/\s+/g,'');
+  while(i<s.length){
+    const c=s[i];
+    if(/[0-9.]/.test(c)){let j=i+1;while(j<s.length&&/[0-9.]/.test(s[j]))j++;t.push({t:'num',v:parseFloat(s.slice(i,j))});i=j;}
+    else if(/[a-zA-Z]/.test(c)){let j=i+1;while(j<s.length&&/[a-zA-Z0-9]/.test(s[j]))j++;t.push({t:'id',v:s.slice(i,j)});i=j;}
+    else if('+-*/^()'.includes(c)){t.push({t:'op',v:c});i++;}
+    else throw 'Unexpected character "'+c+'"';
+  }
+  return t;
+}
+function compileExpr(src){
+  let tk; try{tk=tokenize(src);}catch(e){return {err:String(e)};}
+  let p=0;
+  const peek=()=>tk[p], next=()=>tk[p++];
+  function parseExpr(){let v=parseTerm();while(peek()&&peek().t==='op'&&(peek().v==='+'||peek().v==='-')){const o=next().v;const r=parseTerm();const a=v;v=(o==='+')?(x=>a(x)+r(x)):(x=>a(x)-r(x));}return v;}
+  function parseTerm(){let v=parseFactor();
+    while(peek()&&((peek().t==='op'&&(peek().v==='*'||peek().v==='/'))||peek().t==='num'||peek().t==='id'||(peek().t==='op'&&peek().v==='('))){
+      let o='*'; if(peek().t==='op'&&(peek().v==='*'||peek().v==='/'))o=next().v;
+      const r=parseFactor();const a=v; v=(o==='*')?(x=>a(x)*r(x)):(x=>a(x)/r(x));}
+    return v;}
+  function parseFactor(){const b=parseBase();
+    if(peek()&&peek().t==='op'&&peek().v==='^'){next();const e=parseFactor();return x=>Math.pow(b(x),e(x));}
+    return b;}
+  function parseBase(){
+    const tok=peek();
+    if(!tok) throw 'Unexpected end of expression';
+    if(tok.t==='op'&&tok.v==='-'){next();const b=parseBase();return x=>-b(x);}
+    if(tok.t==='op'&&tok.v==='+'){next();return parseBase();}
+    if(tok.t==='num'){next();return ()=>tok.v;}
+    if(tok.t==='op'&&tok.v==='('){next();const e=parseExpr();if(!peek()||peek().v!==')')throw 'Missing )';next();return e;}
+    if(tok.t==='id'){next();
+      const name=tok.v.toLowerCase();
+      if(name==='x')return x=>x;
+      if(name==='pi')return ()=>Math.PI;
+      if(name==='e')return ()=>Math.E;
+      if(MFN[name]){if(!peek()||peek().v!=='(')throw name+' needs ( )';next();const arg=parseExpr();if(!peek()||peek().v!==')')throw 'Missing )';next();const fn=MFN[name];return x=>fn(arg(x));}
+      throw 'Unknown name "'+tok.v+'"';
+    }
+    throw 'Unexpected token';
+  }
+  let fn; try{fn=parseExpr(); if(p<tk.length)throw 'Unexpected "'+tk[p].v+'"';}catch(e){return {err:String(e)};}
+  // validate numerically
+  try{const test=fn(1); if(typeof test!=='number')return {err:'Not a number'};}catch(e){return {err:'Cannot evaluate'};}
+  return {f:fn};
+}
+
+/* ---------- CALCULATOR ---------- */
+RENDER.calculator=()=>{
+  const c=state.calc;
+  const methods={disk:'Disk · about x-axis',shell:'Shell · about y-axis',square:'Square cross-sections'};
+  panel.innerHTML=`
+    <div class="goal">Custom volume calculator</div>
+    <h2>Type any function</h2>
+    <p>Enter \\(f(x)\\), choose the limits and a method, and watch the solid build itself. Supports <code>x^3</code>, <code>sin(x)</code>, <code>sqrt(x)</code>, <code>e^x</code>, <code>2x+1</code>, <code>1/x</code> and more.</p>
+    <div class="control"><label>f(x) =</label>
+      <input id="exprIn" type="text" value="${c.expr}" spellcheck="false"
+        style="width:100%;background:var(--panel2);color:var(--accent);border:1px solid var(--line);padding:10px 12px;border-radius:8px;font-size:16px;font-family:'SFMono-Regular',Consolas,monospace"
+        oninput="onCalc()"></div>
+    <div class="control" style="display:flex;gap:10px">
+      <div style="flex:1"><label>lower limit a</label>
+        <input id="aIn" type="text" value="${c.a}" oninput="onCalc()" style="width:100%;background:var(--panel2);color:var(--text);border:1px solid var(--line);padding:8px;border-radius:8px;font-size:14px"></div>
+      <div style="flex:1"><label>upper limit b</label>
+        <input id="bIn" type="text" value="${c.b}" oninput="onCalc()" style="width:100%;background:var(--panel2);color:var(--text);border:1px solid var(--line);padding:8px;border-radius:8px;font-size:14px"></div>
+    </div>
+    <div class="control"><label>Method</label>
+      <div class="seg" id="methseg">${Object.entries(methods).map(([k,v])=>`<button class="${c.method===k?'active':''}" onclick="setCalcMethod('${k}')">${v}</button>`).join('')}</div></div>
+    <div class="control"><label>Slices shown <b id="Nv">${c.N}</b></label>
+      <input type="range" min="2" max="80" value="${c.N}" oninput="onCalcN(this.value)"></div>
+    <div class="card" id="setupCard"><h3>The integral</h3><div class="formula" id="setupEq" style="font-size:14px"></div></div>
+    <div id="calcErr" style="color:var(--red);font-size:13px;min-height:0"></div>
+    <div class="nums">
+      <div class="num app"><div class="k">Slice sum</div><div class="v" id="vApp">–</div></div>
+      <div class="num exa"><div class="k">Exact volume</div><div class="v" id="vExa">–</div></div>
+    </div>
+    <div class="errbar"><div id="errfill"></div></div><div class="errtxt" id="errtxt"></div>
+    <div class="btnrow"><button onclick="orbit.auto=!orbit.auto">⟳ Orbit camera</button></div>
+    <div class="tip">Examples to try: <code>x^3</code>, <code>sqrt(x)</code>, <code>sin(x)+1</code>, <code>e^(-x)+1</code>, <code>1/(x+1)</code>.</div>
+  `;
+  buildCalc(); MathJax.typesetPromise&&MathJax.typesetPromise();
+};
+window.onCalc=()=>{ const c=state.calc;
+  c.expr=document.getElementById('exprIn').value;
+  c.a=document.getElementById('aIn').value; c.b=document.getElementById('bIn').value;
+  buildCalc(); };
+window.onCalcN=v=>{ state.calc.N=+v; const e=document.getElementById('Nv'); if(e)e.textContent=v; buildCalc(); };
+window.setCalcMethod=m=>{ state.calc.method=m;
+  [...document.querySelectorAll('#methseg button')].forEach(b=>b.classList.toggle('active',b.textContent.startsWith(({disk:'Disk',shell:'Shell',square:'Square'})[m])));
+  buildCalc(); };
+
+function buildCalc(){
+  const c=state.calc;
+  const errEl=document.getElementById('calcErr');
+  const comp=compileExpr(c.expr);
+  const a=parseFloat(c.a), b=parseFloat(c.b);
+  if(comp.err){ if(errEl)errEl.textContent='⚠ '+comp.err; clearGroup(); addAxes(7); setBlank(); return; }
+  if(!isFinite(a)||!isFinite(b)||b<=a){ if(errEl)errEl.textContent='⚠ Need numeric limits with a < b'; clearGroup(); addAxes(7); setBlank(); return; }
+  if(errEl)errEl.textContent='';
+  const f=comp.f, N=Math.max(2,c.N|0), method=c.method, dx=(b-a)/N;
+
+  // auto scale so the solid fits nicely
+  let fmax=1e-6; const samp=[];
+  for(let i=0;i<=120;i++){const t=a+(b-a)*i/120; const v=f(t); samp.push(v); if(isFinite(v))fmax=Math.max(fmax,Math.abs(v));}
+  const span=Math.max(fmax,(b-a), (method==='shell'?b:0));
+  const S=4.2/span;
+
+  clearGroup();
+  let approx=0, exact, eq;
+  if(method==='disk'){
+    addAxes(7);
+    for(let i=0;i<=64;i++){} // (smooth ref)
+    const pts=[]; for(let i=0;i<=64;i++){const t=a+(b-a)*i/64; const r=Math.abs(f(t)); pts.push(new THREE.Vector2(Math.max(isFinite(r)?r:0,1e-3)*S,t*S));}
+    const ref=new THREE.Mesh(new THREE.LatheGeometry(pts,40),mat(0x36d6c3,0.14)); ref.rotation.z=-Math.PI/2; solidGroup.add(ref);
+    for(let i=0;i<N;i++){const xc=a+(i+0.5)*dx,fv=f(xc); if(!isFinite(fv))continue; const r=Math.abs(fv);
+      approx+=Math.PI*fv*fv*dx;
+      const m=new THREE.Mesh(new THREE.CylinderGeometry(r*S,r*S,dx*S*0.9,36),mat(0xff9f43,0.85));
+      m.rotation.z=-Math.PI/2; m.position.x=xc*S; solidGroup.add(m);}
+    solidGroup.position.set(-(a+b)/2*S,0,0); orbit.target.set(0,0,0);
+    exact=Math.PI*integrate(x=>{const v=f(x);return isFinite(v)?v*v:0;},a,b);
+    eq=`V=\\pi\\!\\int_{${fmt(a)}}^{${fmt(b)}}\\big(f(x)\\big)^2dx`;
+  } else if(method==='shell'){
+    addGrid();
+    solidGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0,0,0),new THREE.Vector3(0,7,0)]),new THREE.LineBasicMaterial({color:0x7ee787})));
+    for(let i=0;i<N;i++){const xc=a+(i+0.5)*dx,h=f(xc); if(!isFinite(h)||xc<=1e-3)continue;
+      approx+=2*Math.PI*xc*h*dx;
+      const cyl=new THREE.CylinderGeometry(xc*S,xc*S,Math.abs(h)*S,44,1,true);
+      const col=new THREE.Color().setHSL(0.08+0.5*i/N,0.7,0.55).getHex();
+      const m=new THREE.Mesh(cyl,mat(col,0.4)); m.position.y=Math.abs(h)*S/2; solidGroup.add(m);}
+    solidGroup.position.set(0,0,0); orbit.target.set(0,2.2,0);
+    exact=2*Math.PI*integrate(x=>{const v=f(x);return isFinite(v)?x*v:0;},a,b);
+    eq=`V=2\\pi\\!\\int_{${fmt(a)}}^{${fmt(b)}}x\\,f(x)\\,dx`;
+  } else { // square cross-sections
+    addAxes(7);
+    for(let i=0;i<N;i++){const xc=a+(i+0.5)*dx,s=f(xc); if(!isFinite(s))continue; const sd=Math.abs(s);
+      approx+=s*s*dx;
+      const m=new THREE.Mesh(new THREE.BoxGeometry(dx*S*0.9,sd*S,sd*S),mat(new THREE.Color().setHSL(0.5-0.35*i/N,0.65,0.55).getHex(),0.85));
+      m.position.set(xc*S,sd*S/2,0); solidGroup.add(m);}
+    solidGroup.position.set(-(a+b)/2*S,0,0); orbit.target.set(0,1.4,0);
+    exact=integrate(x=>{const v=f(x);return isFinite(v)?v*v:0;},a,b);
+    eq=`V=\\int_{${fmt(a)}}^{${fmt(b)}}\\big(f(x)\\big)^2dx`;
+  }
+  const se=document.getElementById('setupEq'); if(se){se.innerHTML='$$'+eq+' \\approx '+exact.toFixed(4)+'$$'; MathJax.typesetPromise&&MathJax.typesetPromise([se]);}
+  showNums(approx,exact);
+}
+function setBlank(){const ids=['vApp','vExa'];ids.forEach(i=>{const e=document.getElementById(i);if(e)e.textContent='–';});
+  const f=document.getElementById('errfill');if(f)f.style.width='0%';const t=document.getElementById('errtxt');if(t)t.textContent='';
+  const se=document.getElementById('setupEq');if(se)se.textContent='';}
+function fmt(n){return (Math.round(n*1000)/1000).toString();}
+
+/* ---------- shared number display ---------- */
+function showNums(approx,exact){
+  const vA=document.getElementById('vApp'), vE=document.getElementById('vExa');
+  if(vA)vA.textContent=approx.toFixed(3); if(vE)vE.textContent=exact.toFixed(3);
+  const err=Math.abs(approx-exact)/Math.abs(exact)*100;
+  const fill=document.getElementById('errfill'); if(fill)fill.style.width=Math.min(err,100)+'%';
+  const et=document.getElementById('errtxt');
+  if(et)et.innerHTML=`Error: <b style="color:var(--text)">${err.toFixed(2)}%</b> — add more slices to watch it vanish.`;
+}
+
+/* ---------- 2D profile (disk tab) ---------- */
+function drawProfile(F,N,mode){
+  const cv=document.getElementById('profile'); if(!cv)return;
+  const ctx=cv.getContext('2d'); const W=cv.width=cv.clientWidth*2, H=cv.height=260; ctx.scale(1,1);
+  ctx.clearRect(0,0,W,H);
+  const {f,a,b}=F; const pad=24;
+  let fmax=0; for(let i=0;i<=100;i++)fmax=Math.max(fmax,f(a+(b-a)*i/100));
+  const X=x=>pad+(x-a)/(b-a)*(W-2*pad), Y=y=>H-pad-(y/fmax)*(H-2*pad);
+  // slabs
+  const dx=(b-a)/N;
+  for(let i=0;i<N;i++){const xc=a+(i+0.5)*dx, r=f(xc);
+    ctx.fillStyle='rgba(255,159,67,.32)'; ctx.strokeStyle='rgba(255,159,67,.8)';
+    const x0=X(a+i*dx),x1=X(a+(i+1)*dx);
+    ctx.fillRect(x0,Y(r),x1-x0,H-pad-Y(r)); ctx.strokeRect(x0,Y(r),x1-x0,H-pad-Y(r));}
+  // curve
+  ctx.beginPath(); for(let i=0;i<=200;i++){const x=a+(b-a)*i/200; i?ctx.lineTo(X(x),Y(f(x))):ctx.moveTo(X(x),Y(f(x)));}
+  ctx.strokeStyle='#36d6c3'; ctx.lineWidth=3; ctx.stroke();
+  // axis
+  ctx.strokeStyle='#2a3a63'; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(pad,H-pad); ctx.lineTo(W-pad,H-pad); ctx.stroke();
+}
+
+/* boot */
+applyCam(); animate(); setTab('intuition');
+[...nav.children][0].classList.add('active');
+window.addEventListener('resize',()=>{ if(tab==='disk')drawProfile(FUNCS[state.func],state.N,'disk'); });
+</script>
+</body>
+</html>
